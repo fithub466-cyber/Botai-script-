@@ -69,8 +69,9 @@ async def ask(interaction: discord.Interaction, prompt: str):
             await interaction.followup.send(reply_text)
 
     except Exception as e:
-        print(f"Error: {e}")
-        await interaction.followup.send("เกิดข้อผิดพลาดในการประมวลผลครับ ลองใหม่อีกครั้งนะ")
+        print(f"Error detail: {e}")
+        # ส่งรายละเอียด Error ออกมาโชว์ในดิสคอร์ดเพื่อเช็คอาการ
+        await interaction.followup.send(f"⚠️ เกิดข้อผิดพลาด: {str(e)}")
 
 # รันระบบ
 keep_alive()

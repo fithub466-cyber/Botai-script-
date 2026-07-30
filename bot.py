@@ -5,7 +5,7 @@ import google.generativeai as genai
 from flask import Flask
 from threading import Thread
 
-# --- สร้างเว็บเซิร์ฟเวอร์จิ๋วไว้หลอก Render ว่ามีพอร์ตเปิดอยู่ ---
+# 1. ระบบเว็บเซิร์ฟเวอร์จิ๋วสำหรับ Render
 app = Flask('')
 
 @app.route('/')
@@ -18,27 +18,32 @@ def run():
 def keep_alive():
     t = Thread(target=run)
     t.start()
-# ----------------------------------------------------
 
-# กำหนดค่า API Key ของ Gemini
+# 2. ตั้งค่า Gemini AI
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-model = genai.GenerativeModel("gemini-1.5-flash")
+generation_config = {
+    "temperature": 0.7,
+    "max_output_tokens": 2048,
+}
+model = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=generation_config)
 
-# ตั้งค่าบอท Discord
+# 3. ตั้งค่า Discord Bot
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
+# กำหนดชื่อห้องที่อนุญาตให้ใช้คำสั่ง
 ALLOWED_CHANNEL_NAME = "bot-chat"
 
 @client.event
 async def on_ready():
     await tree.sync()
-    print(f"Logged in as {client.user} (Slash Commands Synced)")
+    print(f"Logged in as {client.user} (Ready & Synced)")
 
 @tree.command(name="ask", description="ถาม AI หรือให้ช่วยเขียนสคริปต์ Roblox")
 @app_commands.describe(prompt="ใส่คำสั่งหรือสิ่งที่คุณต้องการให้ AI ช่วย")
 async def ask(interaction: discord.Interaction, prompt: str):
+    # เช็คชื่อห้อง
     if interaction.channel.name != ALLOWED_CHANNEL_NAME:
         await interaction.response.send_message(
             f"❌ คำสั่งนี้ใช้ได้เฉพาะในห้อง #{ALLOWED_CHANNEL_NAME} เท่านั้นครับ!", 
@@ -46,12 +51,15 @@ async def ask(interaction: discord.Interaction, prompt: str):
         )
         return
 
+    # ตอบกลับสถานะกำลังคิด
     await interaction.response.defer(thinking=True)
 
     try:
+        # สั่งให้ Gemini สร้างข้อความตอบกลับ
         response = model.generate_content(prompt)
         reply_text = response.text
 
+        # ตัดแบ่งส่งถ้าข้อความยาวเกินไป
         if len(reply_text) > 1900:
             chunks = [reply_text[i:i+1900] for i in range(0, len(reply_text), 1900)]
             await interaction.followup.send(chunks[0])
@@ -61,8 +69,9 @@ async def ask(interaction: discord.Interaction, prompt: str):
             await interaction.followup.send(reply_text)
 
     except Exception as e:
+        print(f"Error: {e}")
         await interaction.followup.send("เกิดข้อผิดพลาดในการประมวลผลครับ ลองใหม่อีกครั้งนะ")
 
-# เปิดเว็บเซิร์ฟเวอร์จำลองก่อนรันบอท
+# รันระบบ
 keep_alive()
 client.run(os.environ["DISCORD_TOKEN"])

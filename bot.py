@@ -1,4 +1,5 @@
 import os
+import io
 import discord
 from discord import app_commands
 import google.generativeai as genai
@@ -19,13 +20,13 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# 2. ตั้งค่า Gemini AI (เปลี่ยนเป็นรุ่น gemini-3.5-flash)
+# 2. ตั้งค่า Gemini AI (ใช้ gemini-2.5-flash ที่รองรับปัจจุบัน)
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 generation_config = {
     "temperature": 0.7,
-    "max_output_tokens": 2048,
+    "max_output_tokens": 4096,
 }
-model = genai.GenerativeModel(model_name="gemini-3.5-flash", generation_config=generation_config)
+model = genai.GenerativeModel(model_name="gemini-2.5-flash", generation_config=generation_config)
 
 # 3. ตั้งค่า Discord Bot
 intents = discord.Intents.default()
@@ -40,8 +41,8 @@ async def on_ready():
     await tree.sync()
     print(f"Logged in as {client.user} (Ready & Synced)")
 
-@tree.command(name="ask", description="ถาม AI หรือให้ช่วยเขียนสคริปต์ Roblox")
-@app_commands.describe(prompt="ใส่คำสั่งหรือสิ่งที่คุณต้องการให้ AI ช่วย")
+@tree.command(name="ask", description="ถาม AI หรือให้ช่วยเขียนสคริปต์ Roblox และส่งมาเป็นไฟล์")
+@app_commands.describe(prompt="ใส่คำสั่งหรือสิ่งที่คุณต้องการให้ AI ช่วยเขียนสคริปต์")
 async def ask(interaction: discord.Interaction, prompt: str):
     # เช็คชื่อห้อง
     if interaction.channel.name != ALLOWED_CHANNEL_NAME:
@@ -59,14 +60,15 @@ async def ask(interaction: discord.Interaction, prompt: str):
         response = model.generate_content(prompt)
         reply_text = response.text
 
-        # ตัดแบ่งส่งถ้าข้อความยาวเกินไป
-        if len(reply_text) > 1900:
-            chunks = [reply_text[i:i+1900] for i in range(0, len(reply_text), 1900)]
-            await interaction.followup.send(chunks[0])
-            for chunk in chunks[1:]:
-                await interaction.followup.send(chunk)
-        else:
-            await interaction.followup.send(reply_text)
+        # แปลงข้อความคำตอบให้กลายเป็นไฟล์ .txt ในหน่วยความจำ (ไม่ต้องบันทึกลงเครื่อง)
+        file_bytes = io.BytesIO(reply_text.encode('utf-8'))
+        discord_file = discord.File(file_bytes, filename="roblox_script.txt")
+
+        # ส่งไฟล์กลับไปในห้องแชทพร้อมข้อความบอก
+        await interaction.followup.send(
+            content="📄 นี่คือสคริปต์และคำตอบที่คุณขอครับ สามารถดาวน์โหลดไปเปิดดูหรือใช้งานได้เลย!", 
+            file=discord_file
+        )
 
     except Exception as e:
         print(f"Error detail: {e}")

@@ -19,13 +19,13 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# 2. ตั้งค่า Gemini AI
+# 2. ตั้งค่า Gemini AI (เปลี่ยนมาใช้ gemini-pro)
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 generation_config = {
     "temperature": 0.7,
     "max_output_tokens": 2048,
 }
-model = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=generation_config)
+model = genai.GenerativeModel(model_name="gemini-pro", generation_config=generation_config)
 
 # 3. ตั้งค่า Discord Bot
 intents = discord.Intents.default()
@@ -70,7 +70,6 @@ async def ask(interaction: discord.Interaction, prompt: str):
 
     except Exception as e:
         print(f"Error detail: {e}")
-        # ส่งรายละเอียด Error ออกมาโชว์ในดิสคอร์ดเพื่อเช็คอาการ
         await interaction.followup.send(f"⚠️ เกิดข้อผิดพลาด: {str(e)}")
 
 # รันระบบ

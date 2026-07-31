@@ -20,13 +20,13 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# 2. ตั้งค่า Gemini AI (ใช้ gemini-2.5-flash ที่รองรับปัจจุบัน)
+# 2. ตั้งค่า Gemini AI (ใช้ gemini-1.5-flash รุ่นที่ถูกต้อง)
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 generation_config = {
     "temperature": 0.7,
     "max_output_tokens": 4096,
 }
-model = genai.GenerativeModel(model_name="gemini-2.5-flash", generation_config=generation_config)
+model = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=generation_config)
 
 # 3. ตั้งค่า Discord Bot
 intents = discord.Intents.default()
@@ -60,13 +60,13 @@ async def ask(interaction: discord.Interaction, prompt: str):
         response = model.generate_content(prompt)
         reply_text = response.text
 
-        # แปลงข้อความคำตอบให้กลายเป็นไฟล์ .txt ในหน่วยความจำ (ไม่ต้องบันทึกลงเครื่อง)
+        # แปลงข้อความคำตอบให้กลายเป็นไฟล์ .txt ในหน่วยความจำ
         file_bytes = io.BytesIO(reply_text.encode('utf-8'))
         discord_file = discord.File(file_bytes, filename="roblox_script.txt")
 
-        # ส่งไฟล์กลับไปในห้องแชทพร้อมข้อความบอก
+        # ส่งไฟล์กลับไปในห้องแชท
         await interaction.followup.send(
-            content="📄 นี่คือสคริปต์และคำตอบที่คุณขอครับ สามารถดาวน์โหลดไปเปิดดูหรือใช้งานได้เลย!", 
+            content="📄 นี่คือสคริปต์และคำตอบที่คุณขอครับ สามารถดาวน์โหลดไปเปิดดูได้เลย!", 
             file=discord_file
         )
 

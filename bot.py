@@ -20,13 +20,13 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# 2. ตั้งค่า Gemini AI (ใช้ gemini-1.5-flash รุ่นที่ถูกต้อง)
+# 2. ตั้งค่า Gemini AI (ใช้ gemini-3.5-flash ตามที่ต้องการ)
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 generation_config = {
     "temperature": 0.7,
     "max_output_tokens": 4096,
 }
-model = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=generation_config)
+model = genai.GenerativeModel(model_name="gemini-3.5-flash", generation_config=generation_config)
 
 # 3. ตั้งค่า Discord Bot
 intents = discord.Intents.default()

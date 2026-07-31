@@ -1,69 +1,45 @@
-import os
-import io
-import discord
-from discord import app_commands
-import google.generativeai as genai
-from flask import Flask
-from threading import Thread
+ลimport os
+from google import genai
+from google.genai import types
 
-app = Flask('')
+# ตั้งค่า Client โดยใช้ API Key จาก Environment Variable
+# (แนะนำให้ตั้งค่าตัวแปร GEMINI_API_KEY ในเครื่องของคุณก่อนรัน)
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
-@app.route('/')
-def home():
-    return "Bot is running!"
+def chat_with_bot():
+    print("🤖 บอทส่วนตัวพร้อมทำงานแล้วครับ (พิมพ์ 'exit' หรือ 'quit' เพื่อออก)")
+    
+    # สร้างบทสนทนาแบบต่อเนื่อง (Chat Session) เพื่อให้บอทจำข้อความก่อนหน้าได้เหมือนคุยกันจริงๆ
+    chat = client.chats.create(
+        model="gemini-3.5-flash",
+        config=types.GenerateContentConfig(
+            system_instruction="คุณคือผู้ช่วยส่วนตัวอัจฉริยะ คอยให้คำปรึกษา ช่วยเหลือ และพูดคุยกับผู้ใช้ด้วยความเป็นกันเอง เป็นประโยชน์ และตรงประเด็น",
+            temperature=0.7,
+        )
+    )
+    
+    while True:
+        user_input = input("\nคุณ: ")
+        if user_input.lower() in ["exit", "quit", "ออก"]:
+            print("🤖 บอท: ไว้คุยกันใหม่นะครับ สวัสดีครับ!")
+            break
+            
+        if not user_input.strip():
+            continue
+            
+        try:
+            # ส่งข้อความหาบอทและรอรับคำตอบ
+            response = chat.send_message(user_input)
+            print(f"\n🤖 บอท: {response.text}")
+        except Exception as e:
+            print(f"\n❌ เกิดข้อผิดพลาด: {e}")
 
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
-
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-generation_config = {
-    "temperature": 0.7,
-    "max_output_tokens": 4096,
-}
-model = genai.GenerativeModel(model_name="gemini-3.5-flash", generation_config=generation_config)
-
-intents = discord.Intents.default()
-client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
-
-ALLOWED_CHANNEL_NAME = "bot-chat"
-
-@client.event
-async def on_ready():
-    await tree.sync()
-    print(f"Logged in as {client.user} (Ready & Synced)")
-
-@tree.command(name="ask", description="ถาม AI หรือให้ช่วยเขียนสคริปต์ Roblox และส่งมาเป็นไฟล์")
-@app_commands.describe(prompt="ใส่คำสั่งหรือสิ่งที่คุณต้องการให้ AI ช่วยเขียนสคริปต์")
-async def ask(interaction: discord.Interaction, prompt: str):
-    if interaction.channel.name != ALLOWED_CHANNEL_NAME:
-        await interaction.response.send_message(
-            f"❌ คำสั่งนี้ใช้ได้เฉพาะในห้อง #{ALLOWED_CHANNEL_NAME} เท่านั้นครับ!", 
-            ephemeral=True
-        )
-        return
-
-    await interaction.response.defer(thinking=True)
-
-    try:
-        response = model.generate_content(prompt)
-        reply_text = response.text
-
-        file_bytes = io.BytesIO(reply_text.encode('utf-8'))
-        discord_file = discord.File(file_bytes, filename="roblox_script.txt")
-
-        await interaction.followup.send(
-            content="📄 นี่คือสคริปต์และคำตอบที่คุณขอครับ สามารถดาวน์โหลดไปเปิดดูได้เลย!", 
-            file=discord_file
-        )
-
-    except Exception as e:
-        print(f"Error detail: {e}")
-        await interaction.followup.send(f"⚠️ เกิดข้อผิดพลาด: {str(e)}")
-
-keep_alive()
-client.run(os.environ["DISCORD_TOKEN"])
+if __name__ == "__main__":
+    # ตรวจสอบว่าใส่ API Key หรือยัง
+    if not os.environ.get("GEMINI_API_KEY"):
+        print("⚠️ คำเตือน: ยังไม่ได้ตั้งค่าตัวแปรสิ่งแวดล้อม GEMINI_API_KEY")
+        print("💡 วิธีตั้งค่า (บน Command Line/Terminal):")
+        print("   - Windows (CMD): set GEMINI_API_KEY=คีย์ของคุณ")
+        print("   - Mac/Linux: export GEMINI_API_KEY='คีย์ของคุณ'")
+    else:
+        chat_with_bot()
